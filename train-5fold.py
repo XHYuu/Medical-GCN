@@ -1,7 +1,6 @@
 import warnings
 import torch
 import torch.nn as nn
-import torch.optim as optim
 from sklearn.metrics import roc_curve, auc, roc_auc_score, accuracy_score, precision_score, recall_score, f1_score, \
     confusion_matrix
 from sklearn.model_selection import KFold
@@ -11,8 +10,10 @@ import os
 import logging
 from datetime import datetime
 from dataload import load_data, create_loaders
-from model import GcnNet
+from model_dict.model import GcnNet
+from model_dict.GATN_model import GAT
 from matplotlib import rcParams
+from tqdm import tqdm
 
 warnings.filterwarnings("ignore")
 
@@ -26,11 +27,11 @@ logging.basicConfig(
     datefmt="%m-%d %H:%M:%S",
     handlers=[
         logging.FileHandler(log_file),  # 日志输出到文件
-        logging.StreamHandler()         # 日志同时输出到控制台
+        logging.StreamHandler()  # 日志同时输出到控制台
     ]
 )
 
-logging.info("basic_GCN \n")
+logging.info("GAT \n")
 
 # 超参数设置
 LEARNING_RATE = 0.025523868808165096
@@ -39,7 +40,7 @@ EPOCHS = 1000
 BATCH_SIZE = 19
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 RANDOM_SEED = 9067
-PATIENCE = 20  # 早停的耐心值
+PATIENCE = 50  # 早停的耐心值
 
 # 加载数据
 main_path = './data/postprocess_data'
@@ -124,7 +125,7 @@ for train_index, val_index in kf.split(dataset):
     fold += 1
     train_loader, val_loader = create_loaders(dataset, train_index, val_index, batch_size=BATCH_SIZE)
 
-    model = GcnNet(input_dim).to(DEVICE)
+    model = GAT(input_dim, nclass=2, nheads=3).to(DEVICE)
     criterion = nn.CrossEntropyLoss().to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
@@ -134,7 +135,7 @@ for train_index, val_index in kf.split(dataset):
     best_fpr = None
     best_tpr = None
 
-    for epoch in range(EPOCHS):
+    for epoch in tqdm(range(EPOCHS), "Training process:"):
         train_loss, train_labels, train_probs = train(model, train_loader, criterion, optimizer)
         val_loss, val_labels, val_probs = evaluate(model, val_loader, criterion)
 
