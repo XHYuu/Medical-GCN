@@ -4,10 +4,11 @@ import pandas as pd
 from scipy.stats import ks_2samp
 import math
 from sklearn.utils import resample
+from tqdm import tqdm
 
 # 文件夹路径
-mdd_folder = './data/SI'
-nc_folder = './data/NSI'
+mdd_folder = './data/row_data/SI'
+nc_folder = './data/row_data/NSI'
 
 
 # 加载数据
@@ -26,7 +27,7 @@ def load_data(folder):
                 # 将行列标签转换成列表
                 indices = df.index.tolist()
                 columns = df.columns.tolist()
-            matrix = df.values.flatten() # 数据一维化，每个样本的所有数据化成一维数据
+            matrix = df.values.flatten()  # 数据一维化，每个样本的所有数据化成一维数据
             data.append(matrix)
     return np.array(data), indices, columns
 
@@ -39,20 +40,20 @@ print("MDD data shape:", mdd_data.shape)
 print("NC data shape:", nc_data.shape)
 
 # 计算Kolmogorov-Smirnov统计量
-num_features = mdd_data.shape[1] # 特征数量
-num_bootstrap_samples = 500  # 设置bootstrap样本数量
-ks_statistics_bootstrap = np.zeros((num_bootstrap_samples, num_features))
-ks_p_values_bootstrap = np.zeros((num_bootstrap_samples, num_features))
+num_features = mdd_data.shape[1]  # 特征数量
+num_bootstrap_samples = 500  # 重采样500次
+ks_statistics_bootstrap = np.zeros((num_bootstrap_samples, num_features))  # 每个特征在500个重采样中得到的KS值
+ks_p_values_bootstrap = np.zeros((num_bootstrap_samples, num_features))  # 统计样本数据与真实分布之间的差异
 
-for b in range(num_bootstrap_samples):
-    # Bootstrap抽样，每次抽样的样本大小与原始数据集相同，有放回
+for b in tqdm(range(num_bootstrap_samples), "Bootstrap progress:"):
+    # Bootstrap抽样，每次抽样的样本大小与原始数据集相同，有放回。n_samples控制一次的采样量
     mdd_resampled = resample(mdd_data, n_samples=mdd_data.shape[0], replace=True)
     nc_resampled = resample(nc_data, n_samples=nc_data.shape[0], replace=True)
 
     for i in range(num_features):
         mdd_feature = mdd_resampled[:, i]
         nc_feature = nc_resampled[:, i]
-        ks_stat, p_value = ks_2samp(mdd_feature, nc_feature)
+        ks_stat, p_value = ks_2samp(mdd_feature, nc_feature)  # 执行KS计算
         ks_statistics_bootstrap[b, i] = ks_stat
         ks_p_values_bootstrap[b, i] = p_value
 
@@ -62,7 +63,7 @@ ks_p_values_mean = np.mean(ks_p_values_bootstrap, axis=0)
 
 # 保留前500个特征
 top_n_features = 500
-top_features_indices = np.argsort(ks_statistics_mean)[-top_n_features:]
+top_features_indices = np.argsort(ks_statistics_mean)[-top_n_features:]  # 保留KS值最大的500个特征，先排序后取值
 
 # 筛选后的特征
 mdd_selected_features = mdd_data[:, top_features_indices]
@@ -76,8 +77,8 @@ selected_feature_names = [(row_indices[row], col_indices[col]) for row, col in s
 mdd_selected_df = pd.DataFrame(mdd_selected_features, columns=selected_feature_names)
 nc_selected_df = pd.DataFrame(nc_selected_features, columns=selected_feature_names)
 
-mdd_selected_df.to_csv('D:/All result/si vs nsi/10fold/gut/SI_selected_features.csv', index=False)
-nc_selected_df.to_csv('D:/All result/si vs nsi/10fold/gut/NSI_selected_features.csv', index=False)
+mdd_selected_df.to_csv('./data/select/SI_selected_features.csv', index=False)
+nc_selected_df.to_csv('./data/select/NSI_selected_features.csv', index=False)
 
 # 保存筛选特征的KS统计量和p值
 selected_ks_statistics = ks_statistics_mean[top_features_indices]
@@ -89,4 +90,4 @@ ks_p_df = pd.DataFrame({
     'p_value': selected_p_values
 })
 
-ks_p_df.to_csv('D:/All result/si vs nsi/10fold/gut/selected_features_ks_p_values.csv', index=False)
+ks_p_df.to_csv('./data/select/selected_features_ks_p_values.csv', index=False)

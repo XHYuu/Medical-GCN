@@ -2,16 +2,35 @@ import warnings
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from sklearn.metrics import roc_curve, auc, roc_auc_score, accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.metrics import roc_curve, auc, roc_auc_score, accuracy_score, precision_score, recall_score, f1_score, \
+    confusion_matrix
 from sklearn.model_selection import KFold
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import logging
+from datetime import datetime
 from dataload import load_data, create_loaders
 from model import GcnNet
 from matplotlib import rcParams
 
 warnings.filterwarnings("ignore")
+
+current_time = datetime.now().strftime("%m%d_%H%M%S")  # 格式化时间
+log_folder = f"logs/{current_time}"  # 日志文件夹路径
+os.makedirs(log_folder, exist_ok=True)  # 创建日志文件夹
+log_file = os.path.join(log_folder, "log.txt")
+logging.basicConfig(
+    level=logging.INFO,  # 日志级别为 INFO
+    format="%(asctime)s - %(levelname)s - %(message)s",  # 设置日志格式
+    datefmt="%m-%d %H:%M:%S",
+    handlers=[
+        logging.FileHandler(log_file),  # 日志输出到文件
+        logging.StreamHandler()         # 日志同时输出到控制台
+    ]
+)
+
+logging.info("basic_GCN \n")
 
 # 超参数设置
 LEARNING_RATE = 0.025523868808165096
@@ -19,15 +38,11 @@ WEIGHT_DECAY = 0.00011842653778790806
 EPOCHS = 1000
 BATCH_SIZE = 19
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-SAVE_PATH = "./All result/si vs nsi/10fold/new/50/checkpoint"
 RANDOM_SEED = 9067
 PATIENCE = 20  # 早停的耐心值
 
-if not os.path.exists(SAVE_PATH):
-    os.makedirs(SAVE_PATH)
-
 # 加载数据
-main_path = 'D:/All result/si vs nsi/10fold/new/50/data'
+main_path = './data/postprocess_data'
 dataset = load_data(main_path)
 
 np.random.seed(RANDOM_SEED)
@@ -142,7 +157,7 @@ for train_index, val_index in kf.split(dataset):
             patience_counter += 1
 
         if patience_counter >= PATIENCE:
-            print(f"Early stopping at epoch {epoch + 1} for fold {fold}")
+            logging.info(f"Early stopping at epoch {epoch + 1} for fold {fold}")
             break
 
     fpr_list.append(best_fpr)
@@ -176,13 +191,13 @@ for train_index, val_index in kf.split(dataset):
     train_specificities.append(train_specificity)
     val_specificities.append(val_specificity)
 
-    print(f"Fold {fold}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
-    print(f"Train AUC: {train_auc:.4f}, Val AUC: {best_val_auc:.4f}")
-    print(f"Train Acc: {train_acc:.4f}, Val Acc: {best_val_acc:.4f}")
-    print(f"Train Precision: {train_precision:.4f}, Val Precision: {val_precision:.4f}")
-    print(f"Train Recall: {train_recall:.4f}, Val Recall: {val_recall:.4f}")
-    print(f"Train F1: {train_f1:.4f}, Val F1: {val_f1:.4f}")
-    print(f"Train Specificity: {train_specificity:.4f}, Val Specificity: {val_specificity:.4f}")
+    logging.info(f"Fold {fold}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+    logging.info(f"Train AUC: {train_auc:.4f}, Val AUC: {best_val_auc:.4f}")
+    logging.info(f"Train Acc: {train_acc:.4f}, Val Acc: {best_val_acc:.4f}")
+    logging.info(f"Train Precision: {train_precision:.4f}, Val Precision: {val_precision:.4f}")
+    logging.info(f"Train Recall: {train_recall:.4f}, Val Recall: {val_recall:.4f}")
+    logging.info(f"Train F1: {train_f1:.4f}, Val F1: {val_f1:.4f}")
+    logging.info(f"Train Specificity: {train_specificity:.4f}, Val Specificity: {val_specificity:.4f} \n")
 
 # 计算和输出五折平均值
 mean_train_auc = np.mean(train_auc_scores)
@@ -198,16 +213,16 @@ mean_val_f1 = np.mean(val_f1_scores)
 mean_train_specificity = np.mean(train_specificities)
 mean_val_specificity = np.mean(val_specificities)
 
-print(f"Mean Train AUC: {mean_train_auc:.4f}, Mean Val AUC: {mean_val_auc:.4f}")
-print(f"Mean Train Acc: {mean_train_acc:.4f}, Mean Val Acc: {mean_val_acc:.4f}")
-print(f"Mean Train Precision: {mean_train_precision:.4f}, Mean Val Precision: {mean_val_precision:.4f}")
-print(f"Mean Train Recall: {mean_train_recall:.4f}, Mean Val Recall: {mean_val_recall:.4f}")
-print(f"Mean Train F1: {mean_train_f1:.4f}, Mean Val F1: {mean_val_f1:.4f}")
-print(f"Mean Train Specificity: {mean_train_specificity:.4f}, Mean Val Specificity: {mean_val_specificity:.4f}")
+logging.info(f"Mean Train AUC: {mean_train_auc:.4f}, Mean Val AUC: {mean_val_auc:.4f}")
+logging.info(f"Mean Train Acc: {mean_train_acc:.4f}, Mean Val Acc: {mean_val_acc:.4f}")
+logging.info(f"Mean Train Precision: {mean_train_precision:.4f}, Mean Val Precision: {mean_val_precision:.4f}")
+logging.info(f"Mean Train Recall: {mean_train_recall:.4f}, Mean Val Recall: {mean_val_recall:.4f}")
+logging.info(f"Mean Train F1: {mean_train_f1:.4f}, Mean Val F1: {mean_val_f1:.4f}")
+logging.info(f"Mean Train Specificity: {mean_train_specificity:.4f}, Mean Val Specificity: {mean_val_specificity:.4f}")
 
 # 设置全局字体（使用系统字体 Arial 或 Times New Roman）
 rcParams['font.sans-serif'] = ['Times New Roman']  # 替换为 'Times New Roman' 或其他字体名称
-rcParams['axes.unicode_minus'] = False   # 正常显示负号
+rcParams['axes.unicode_minus'] = False  # 正常显示负号
 
 # 绘制每一折的AUC曲线和五折平均AUC曲线
 plt.figure(figsize=(10, 6))
@@ -231,9 +246,8 @@ plt.title('ROC Curves for 5-Fold Cross Validation', fontsize=12)  # 修改标题
 plt.tick_params(axis='both', labelsize=14)  # 修改刻度字体大小
 plt.legend(loc="lower right", fontsize=14)  # 修改图例字体大小
 plt.grid(False)
-pdf_save_path = "D:/All result/si vs nsi/10fold/new/50/results/roc_curves.pdf"
-plt.savefig(pdf_save_path, format='pdf')  # 指定格式为 PDF
-plt.show()
+plt.savefig(os.path.join(log_folder, "roc_curves.png"))
+# plt.show()
 
 # 绘制五折平均训练损失曲线
 plt.figure(figsize=(10, 6))
@@ -244,5 +258,6 @@ plt.ylabel('Loss', fontsize=20)  # 修改 y 轴标签字体大小
 plt.tick_params(axis='both', labelsize=18)  # 修改刻度字体大小
 plt.legend(fontsize=18)  # 修改图例字体大小
 plt.grid()
-plt.savefig(os.path.join(SAVE_PATH, "D:/GCN-test/positive connection/brain-gut/500/120/1/mean_train_loss_per_epoch.png"))
-plt.show()
+plt.savefig(
+    os.path.join(log_folder, "mean_train_loss_per_epoch.png"))
+# plt.show()

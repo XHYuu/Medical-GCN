@@ -66,7 +66,7 @@ def get_graph_signal(nx_graph):
 def to_pytorch_dataset(dataset, label_offset=0, batch_size=16):
     list_set = []
     for graph, label in dataset:
-        F, G = get_graph_signal(graph), nx.to_numpy_matrix(graph)
+        F, G = get_graph_signal(graph), nx.to_numpy_array(graph)
         F_tensor = torch.from_numpy(F).float()
         G_tensor = torch.from_numpy(G).float()
 
