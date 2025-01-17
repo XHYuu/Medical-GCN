@@ -46,13 +46,13 @@ def args_parse():
 
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    log_folder = logger(args)
+    log_folder = logger()
     args.log_folder = log_folder
     logging.info(f"model:{args.model_name}  epochs:{args.epochs}  lr:{args.lr}  patience:{args.patience}")
     return args
 
 
-def logger(args):
+def logger():
     current_time = datetime.now().strftime("%m%d_%H%M%S")
     log_folder = f"./logs/{current_time}"
     os.makedirs(log_folder, exist_ok=True)
@@ -198,6 +198,7 @@ def train_val(args):
             ).to(args.device)
         else:
             logging.error("Without this model")
+            break
 
         criterion = nn.CrossEntropyLoss().to(args.device)
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -274,26 +275,18 @@ def train_val(args):
         logging.info(f"Train Specificity: {train_specificity:.4f}, Val Specificity: {val_specificity:.4f} \n")
 
     # 计算和输出五折平均值
-    mean_train_auc = np.mean(train_auc_scores)
-    mean_val_auc = np.mean(val_auc_scores)
-    mean_train_acc = np.mean(train_accuracies)
-    mean_val_acc = np.mean(val_accuracies)
-    mean_train_precision = np.mean(train_precisions)
-    mean_val_precision = np.mean(val_precisions)
-    mean_train_recall = np.mean(train_recalls)
-    mean_val_recall = np.mean(val_recalls)
-    mean_train_f1 = np.mean(train_f1_scores)
-    mean_val_f1 = np.mean(val_f1_scores)
-    mean_train_specificity = np.mean(train_specificities)
-    mean_val_specificity = np.mean(val_specificities)
-
-    logging.info(f"Mean Train AUC: {mean_train_auc:.4f}, Mean Val AUC: {mean_val_auc:.4f}")
-    logging.info(f"Mean Train Acc: {mean_train_acc:.4f}, Mean Val Acc: {mean_val_acc:.4f}")
-    logging.info(f"Mean Train Precision: {mean_train_precision:.4f}, Mean Val Precision: {mean_val_precision:.4f}")
-    logging.info(f"Mean Train Recall: {mean_train_recall:.4f}, Mean Val Recall: {mean_val_recall:.4f}")
-    logging.info(f"Mean Train F1: {mean_train_f1:.4f}, Mean Val F1: {mean_val_f1:.4f}")
-    logging.info(
-        f"Mean Train Specificity: {mean_train_specificity:.4f}, Mean Val Specificity: {mean_val_specificity:.4f}")
+    logging.info(f"Mean Train AUC: {np.mean(train_auc_scores):.4f}, "
+                 f"Mean Val AUC: {np.mean(val_auc_scores):.4f}")
+    logging.info(f"Mean Train Acc: {np.mean(train_accuracies):.4f}, "
+                 f"Mean Val Acc: {np.mean(val_accuracies):.4f}")
+    logging.info(f"Mean Train Precision: {np.mean(train_precisions):.4f}, "
+                 f"Mean Val Precision: {np.mean(val_precisions):.4f}")
+    logging.info(f"Mean Train Recall: {np.mean(train_recalls):.4f}, "
+                 f"Mean Val Recall: {np.mean(val_recalls):.4f}")
+    logging.info(f"Mean Train F1: {np.mean(train_f1_scores):.4f},"
+                 f" Mean Val F1: {np.mean(val_f1_scores):.4f}")
+    logging.info(f"Mean Train Specificity: {np.mean(train_specificities):.4f}, "
+                 f"Mean Val Specificity: {np.mean(val_specificities):.4f}")
 
     return model, fpr_list, tpr_list, roc_auc_list, epoch_train_losses
 
