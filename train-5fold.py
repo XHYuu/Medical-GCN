@@ -40,7 +40,7 @@ def args_parse():
                         help='Weight decay (L2 loss on parameters).')
     parser.add_argument("--batch_size", type=int, default=19)
     parser.add_argument('--dropout', type=float, default=0.5)
-    parser.add_argument('--model_name', type=str, default="GAT")
+    parser.add_argument('--model_name', type=str, default="GCN_basic")
     parser.add_argument("--patience", type=int, default=1000000,
                         help='Threshold of early stop')
 
@@ -162,6 +162,7 @@ def evaluate(args, model, val_loader, criterion):
 
 
 def train_val(args):
+    # 分成 n_splits 块，且随机打乱
     kf = KFold(n_splits=5, shuffle=True, random_state=args.seed)
     fold = 0
 
@@ -185,13 +186,12 @@ def train_val(args):
     roc_auc_list = []
 
     dataset = load_data(args.dataset_path)
-
     for train_index, val_index in kf.split(dataset):
         fold += 1
         train_loader, val_loader = create_loaders(dataset, train_index, val_index, batch_size=args.epochs)
 
         try:
-            model = model_dict[args.model_name]
+            model = model_dict[args.model_name].to(args.device)
         except Exception as _:
             shutil.rmtree(args.log_folder)
             logging.error(f"Model '{args.model_name}' is not defined in model_dict.")
