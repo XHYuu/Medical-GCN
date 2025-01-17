@@ -12,6 +12,7 @@ import warnings
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 import os
+import shutil
 import logging
 from tqdm import tqdm
 from datetime import datetime
@@ -22,6 +23,10 @@ from model_dict.GCN_basic import GcnNet
 from model_dict.GATN import GAT
 
 warnings.filterwarnings("ignore")
+model_dict = {
+    "GCN_basic": GcnNet(n_input=20),
+    "GAT": GAT(n_input=20, nclass=2, nheads=3, dropout=0.5)
+}
 
 
 def args_parse():
@@ -34,8 +39,6 @@ def args_parse():
     parser.add_argument('--weight_decay', type=float, default=0.00011842653778790806,
                         help='Weight decay (L2 loss on parameters).')
     parser.add_argument("--batch_size", type=int, default=19)
-    parser.add_argument('--input_dim', type=int, default=20,
-                        help='Number of input dimension.')
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--model_name', type=str, default="GAT")
     parser.add_argument("--patience", type=int, default=1000000,
@@ -187,18 +190,12 @@ def train_val(args):
         fold += 1
         train_loader, val_loader = create_loaders(dataset, train_index, val_index, batch_size=args.epochs)
 
-        if args.model_name == "GCN":
-            model = GcnNet(args.input_dim).to(args.device)
-        elif args.model_name == "GAT":
-            model = GAT(
-                args.input_dim,
-                nclass=2,
-                nheads=3,
-                dropout=0.5
-            ).to(args.device)
-        else:
-            logging.error("Without this model")
-            break
+        try:
+            model = model_dict[args.model_name]
+        except Exception as _:
+            shutil.rmtree(args.log_folder)
+            logging.error(f"Model '{args.model_name}' is not defined in model_dict.")
+            exit()
 
         criterion = nn.CrossEntropyLoss().to(args.device)
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -296,7 +293,7 @@ if __name__ == '__main__':
     model, fpr_list, tpr_list, roc_auc_list, epoch_train_losses = train_val(args)
     draw_png(args, fpr_list, tpr_list, roc_auc_list, epoch_train_losses)
 
-    # 保持模型参数
+    # 保存模型参数
     check_path = os.path.join(args.log_folder, "check_point")
     os.makedirs(check_path, exist_ok=True)
     torch.save(model.state_dict(), os.path.join(check_path, "model.pth"))

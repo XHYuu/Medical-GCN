@@ -38,9 +38,9 @@ class GraphConvolution(nn.Module):
 
 
 class GcnNet(nn.Module):
-    def __init__(self, input_dim):
+    def __init__(self, n_input):
         super(GcnNet, self).__init__()
-        self.gcn1 = GraphConvolution(input_dim, 16)
+        self.gcn1 = GraphConvolution(n_input, 16)
         self.gcn2 = GraphConvolution(16, 2)
 
     def forward(self, adjacency, feature):
